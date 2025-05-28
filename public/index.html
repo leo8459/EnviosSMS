@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Enviar SMS desde mi número</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 40px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 6px;
+        text-align: left;
+      }
+      th {
+        background: #f0f0f0;
+      }
+      button {
+        margin-top: 15px;
+        padding: 8px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>📦 Paquetes disponibles (elige a quién enviar SMS)</h2>
+
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>CODIGO</th>
+          <th>TELÉFONO</th>
+          <th> ✔</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button id="btnEnviar">📤 Enviar SMS</button>
+
+    <script>
+      /* --- 1. Cargar datos desde la API --- */
+      async function cargarPaquetes() {
+        const url = "http://172.65.10.52/api/packagesRDD";
+        const token =
+          "eZMlItx6mQMNZjxoijEvf7K3pYvGGXMvEHmQcqvtlAPOEAPgyKDVOpyF7JP0ilbK";
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const datos = await res.json();
+
+        const tbody = document.querySelector("#tabla tbody");
+        tbody.innerHTML = ""; // limpìa
+        datos.forEach((p, idx) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${p.CODIGO}</td>
+      <td>${p.TELEFONO}</td>
+      <td><input type="checkbox" value="${p.TELEFONO}"></td>
+    `;
+          tbody.appendChild(tr);
+        });
+      }
+      cargarPaquetes();
+
+      /* --- 2. Enviar los seleccionados --- */
+      document
+        .getElementById("btnEnviar")
+        .addEventListener("click", async () => {
+          const checks = [
+            ...document.querySelectorAll("tbody input[type=checkbox]:checked"),
+          ];
+          if (checks.length === 0) {
+            alert("Selecciona al menos un teléfono");
+            return;
+          }
+
+          const mensaje = prompt("Escribe el mensaje a enviar:");
+          if (!mensaje) {
+            return;
+          }
+
+          for (const c of checks) {
+            const numero = c.value.startsWith("+") ? c.value : `+591${c.value}`;
+            // mismo /enviar de tu backend:
+            await fetch("/enviar", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ numero, mensaje }),
+            });
+          }
+          alert(
+            "SMS enviados (revisa la consola del servidor para confirmar)."
+          );
+        });
+    </script>
+  </body>
+</html>
