@@ -1,43 +1,42 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Enviar SMS desde mi número</title>
-  <style>
-    body{font-family:sans-serif;margin:40px;}
-    table{border-collapse:collapse;width:100%;}
-    th,td{border:1px solid #ccc;padding:6px;text-align:left;}
-    th{background:#f0f0f0;}
-    button{margin-top:15px;padding:8px 16px;}
-  </style>
+<meta charset="UTF-8">
+<title>Enviar SMS</title>
+<style>
+ body{font-family:sans-serif;margin:40px;}
+ table{border-collapse:collapse;width:100%;}
+ th,td{border:1px solid #ccc;padding:6px;text-align:left;}
+ th{background:#f0f0f0;}
+ tr.ok   {background:#d4edda;}
+ tr.fail {background:#f8d7da;}
+ tr.wait {background:#fff4cc;}
+ button{margin-top:15px;padding:8px 16px;}
+</style>
 </head>
 <body>
 
 <h2>📦 Paquetes disponibles (elige a quién enviar SMS)</h2>
 
 <table id="tabla">
-  <thead>
-    <tr>
-      <th>#</th><th>CODIGO</th><th>TELÉFONO</th><th>✔</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+ <thead><tr><th>#</th><th>CODIGO</th><th>TELÉFONO</th><th>✔</th></tr></thead>
+ <tbody></tbody>
 </table>
 
 <button id="btnEnviar">📤 Enviar SMS</button>
 
 <script>
-/* --- 1. Cargar datos a través del proxy (mismo origin) --- */
+/* ── 1. cargar paquetes ───────────────────────── */
 async function cargarPaquetes(){
-  const res   = await fetch('/api/paquetes');     // ← sin CORS
-  const datos = await res.json();
-
+  const r   = await fetch('/api/paquetes');
+  const arr = await r.json();
   const tbody = document.querySelector('#tabla tbody');
-  tbody.innerHTML = '';
-  datos.forEach((p,idx)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${idx+1}</td>
+  tbody.innerHTML='';
+  arr.forEach((p,i)=>{
+    if(!p.TELEFONO || p.TELEFONO==0) return;          // ignora vacíos
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
       <td>${p.CODIGO}</td>
       <td>${p.TELEFONO}</td>
       <td><input type="checkbox" value="${p.TELEFONO}"></td>`;
@@ -46,22 +45,33 @@ async function cargarPaquetes(){
 }
 cargarPaquetes();
 
-/* --- 2. Enviar SMS a los seleccionados --- */
+/* ── 2. enviar seleccionados ──────────────────── */
 document.getElementById('btnEnviar').addEventListener('click',async()=>{
-  const checks = [...document.querySelectorAll('tbody input:checked')];
-  if(!checks.length){ return alert('Selecciona al menos un teléfono'); }
-  const mensaje = prompt('Escribe el mensaje a enviar:');
-  if(!mensaje){ return; }
+  const sel=[...document.querySelectorAll('tbody input:checked')];
+  if(!sel.length) return alert('Selecciona al menos un teléfono');
+  const mensaje=prompt('Mensaje a enviar:');
+  if(!mensaje) return;
 
-  for(const c of checks){
-    const numero = c.value.startsWith('+') ? c.value : `+591${c.value}`;
-    await fetch('/enviar', {
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({ numero, mensaje })
-    });
+  for(const chk of sel){
+    const tr=chk.closest('tr');
+    tr.className='wait';
+    const num=chk.value.startsWith('+')?chk.value:`+591${chk.value}`;
+
+    try{
+      const r=await fetch('/enviar',{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams({ numero:num, mensaje })
+      });
+      tr.className = r.ok ? 'ok':'fail';
+      if(!r.ok){
+        console.error('Error',r.status,num);
+      }
+    }catch(e){
+      tr.className='fail';
+      console.error('Fetch error',e);
+    }
   }
-  alert('SMS enviados. Revisa la consola del servidor.');
 });
 </script>
 </body>
