@@ -1,59 +1,192 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>SMS Gateway</title>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Envío de SMS</title>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
 <style>
-body{font-family:sans-serif;margin:30px;}
-section{margin-bottom:35px;}
-table{border-collapse:collapse;width:100%;}
-th,td{border:1px solid #ccc;padding:6px;}
-th{background:#f0f0f0;}
-tr.ok{background:#d4edda;}tr.fail{background:#f8d7da;}tr.wait{background:#fff4cc;}tr.sel{background:#cce5ff;}
-button{padding:6px 14px;margin-top:10px;}
-#buscador{width:280px;padding:6px;}
-textarea{width:100%;height:60px;}
-</style></head><body>
+:root{
+  --bg:          #f7f9fc;
+  --card:        #ffffff;
+  --primary:     #2563eb;       /* azul */
+  --primary-alt: #1d4ed8;
+  --danger:      #dc2626;
+  --success:     #16a34a;
+  --gray:        #6b7280;
+  --radius:      8px;
+  --shadow:      0 2px 6px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:#111827;
+  padding:24px;
+}
+/* ---------- Header ------------- */
+h1{font-size:24px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+h1::before{
+  content:"📲";
+  font-size:28px;
+}
 
-<h1>📲 Envío de SMS</h1>
+/* ---------- Controles ----------- */
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:14px;
+}
+input[type=text]{
+  padding:8px 12px;
+  border:1px solid #d1d5db;
+  border-radius: var(--radius);
+  width:260px;
+}
+button{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius);
+  padding:8px 18px;
+  font-weight:600;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  box-shadow:var(--shadow);
+  transition:background .2s;
+}
+button:hover{background:var(--primary-alt)}
+label.checkbox{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:14px;
+  color:var(--gray);
+}
 
-<!-- 1. Buscador / selección -->
-<section>
+/* ---------- Tabla -------------- */
+.table-wrapper{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:auto;
+  max-height:55vh;
+}
+table{
+  border-collapse:collapse;
+  width:100%;
+  min-width:600px;
+}
+thead th{
+  position:sticky;top:0;
+  background:#e5e7eb;
+  padding:10px;
+  font-size:14px;
+}
+td{
+  padding:7px 10px;
+  border-top:1px solid #e5e7eb;
+  font-size:14px;
+}
+tr:nth-child(even){background:#f9fafb}
+tr.sel{background:#c7d7ff!important}
+tr.wait{background:#fff4cc!important}
+tr.ok{background:#d1fae5!important}
+tr.fail{background:#fee2e2!important}
+
+/* ---------- Sección mensajes ---- */
+section.msgs{
+  margin-top:38px;
+}
+section.msgs h2{
+  font-size:20px;
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:6px;
+}
+section.msgs h2::before{content:"💬"}
+textarea{
+  width:100%;height:70px;
+  padding:10px;border:1px solid #d1d5db;border-radius:var(--radius);
+  resize:vertical;margin-bottom:8px;
+}
+ul#listaMsg{list-style:none;margin-top:10px}
+ul#listaMsg li{
+  background:var(--card);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius);
+  padding:8px 12px;
+  margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+ul#listaMsg button{
+  background:var(--danger);
+  padding:4px 10px;font-size:14px;
+}
+ul#listaMsg button:hover{background:#b91c1c}
+@media(max-width:700px){
+  input[type=text]{flex:1;width:100%}
+  .controls{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<h1>Envío de SMS</h1>
+
+<div class="controls">
   <input id="buscador" placeholder="Escanea o escribe CODIGO y Enter">
   <button id="btnEnviar">📤 Enviar SMS</button>
-  <label><input type="checkbox" id="chkAleatorio"> usar mensaje aleatorio</label>
-  <table id="tabla"><thead><tr>
-    <th>#</th><th>CODIGO</th><th>TELÉFONO</th>
-    <th><input id="checkAll" type="checkbox"></th>
-  </tr></thead><tbody></tbody></table>
-</section>
+  <label class="checkbox">
+    <input type="checkbox" id="chkAleatorio"> usar mensaje aleatorio
+  </label>
+</div>
 
-<!-- 2. Gestor de mensajes -->
-<section>
-  <h2>💬 Mensajes guardados</h2>
-  <textarea id="nuevoTxt" placeholder="Escribe mensaje y pulsa Guardar…"></textarea><br>
+<div class="table-wrapper">
+  <table id="tabla">
+    <thead><tr>
+      <th>#</th><th>CODIGO</th><th>TELÉFONO</th>
+      <th><input id="checkAll" type="checkbox"></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<section class="msgs">
+  <h2>Mensajes guardados</h2>
+  <textarea id="nuevoTxt" placeholder="Escribe mensaje y pulsa Guardar…"></textarea>
   <button id="btnGuardar">💾 Guardar mensaje</button>
   <ul id="listaMsg"></ul>
 </section>
 
 <script>
-/* ─ Variables globales ─ */
-let mensajes=[];
-
-/* ───── Paquetes ───── */
+/* ————— paquetes ————— */
 async function cargarPaquetes(){
-  const r=await fetch('/api/paquetes'); const arr=await r.json();
-  const tb=document.querySelector('#tabla tbody'); tb.innerHTML='';
+  const r = await fetch('/api/paquetes');
+  const arr = await r.json();
+  const tb = document.querySelector('#tabla tbody');
+  tb.innerHTML = '';
   arr.forEach((p,i)=>{
     if(!p.TELEFONO||p.TELEFONO==0) return;
     tb.insertAdjacentHTML('beforeend',`
       <tr><td>${i+1}</td><td class="cod">${p.CODIGO}</td>
-      <td>${p.TELEFONO}</td><td><input class="chk" value="${p.TELEFONO}" type="checkbox"></td></tr>`);
+      <td>${p.TELEFONO}</td>
+      <td style="text-align:center"><input class="chk" type="checkbox" value="${p.TELEFONO}"></td></tr>`);
   });
 }
 cargarPaquetes();
 
-/* ───── Mensajes ───── */
+/* ————— mensajes guardados ————— */
+let mensajes=[];
 async function cargarMensajes(){
   mensajes = await (await fetch('/api/mensajes')).json();
-  const ul=document.getElementById('listaMsg'); ul.innerHTML='';
+  const ul=document.getElementById('listaMsg');
+  ul.innerHTML='';
   mensajes.forEach(m=>{
     ul.insertAdjacentHTML('beforeend',`
       <li>${m.texto}
@@ -63,58 +196,58 @@ async function cargarMensajes(){
 }
 cargarMensajes();
 
-/* guardar nuevo */
+/* guardar */
 document.getElementById('btnGuardar').onclick=async()=>{
-  const txt=document.getElementById('nuevoTxt').value.trim();
-  if(!txt) return;
+  const t=document.getElementById('nuevoTxt').value.trim();
+  if(!t) return;
   await fetch('/api/mensajes',{method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:new URLSearchParams({texto:txt})});
+    body:new URLSearchParams({texto:t})});
   document.getElementById('nuevoTxt').value='';
   cargarMensajes();
 };
-
 /* borrar */
-document.getElementById('listaMsg').onclick=async e=>{
+document.getElementById('listaMsg').onclick=e=>{
   if(e.target.tagName!=='BUTTON') return;
-  await fetch('/api/mensajes/'+e.target.dataset.id,{method:'DELETE'});
-  cargarMensajes();
+  fetch('/api/mensajes/'+e.target.dataset.id,{method:'DELETE'}).then(cargarMensajes);
 };
 
-/* ───── Seleccionar todo ───── */
+/* seleccionar todo */
 document.getElementById('checkAll').onchange=e=>{
   document.querySelectorAll('.chk').forEach(c=>c.checked=e.target.checked);
 };
 
-/* ───── Buscador / lector ───── */
+/* buscador */
 document.getElementById('buscador').onkeypress=e=>{
   if(e.key!=='Enter') return;
-  const val=e.target.value.trim().toUpperCase(); if(!val) return;
+  const val = e.target.value.trim().toUpperCase(); if(!val) return;
   let ok=false;
   document.querySelectorAll('#tabla tbody tr').forEach(tr=>{
     tr.classList.remove('sel');
     if(tr.querySelector('.cod').textContent.trim().toUpperCase()===val){
-      tr.classList.add('sel'); tr.querySelector('.chk').checked=true;
-      tr.scrollIntoView({behavior:'smooth',block:'center'}); ok=true;
+      tr.classList.add('sel');
+      tr.querySelector('.chk').checked=true;
+      tr.scrollIntoView({behavior:'smooth',block:'center'});
+      ok=true;
     }
   });
-  if(!ok) alert('Código no encontrado'); e.target.value='';
+  if(!ok) alert('Código no encontrado');
+  e.target.value='';
 };
 
-/* ───── Enviar SMS ───── */
+/* enviar SMS */
 document.getElementById('btnEnviar').onclick=async()=>{
   const sel=[...document.querySelectorAll('.chk:checked')];
   if(!sel.length) return alert('Marca teléfonos');
   const aleat=document.getElementById('chkAleatorio').checked;
-  let textoGlobal=!aleat ? prompt('Mensaje a enviar:') : null;
-  if(!aleat && !textoGlobal) return;
-
-  if(aleat && mensajes.length===0){ return alert('No hay mensajes guardados'); }
+  let mensajeGlobal = aleat ? null : prompt('Mensaje a enviar:');
+  if(!aleat && !mensajeGlobal) return;
+  if(aleat && mensajes.length===0) return alert('No hay mensajes guardados');
 
   for(const c of sel){
     const tr=c.closest('tr'); tr.className='wait';
     const num=c.value.startsWith('+')?c.value:`+591${c.value}`;
-    const msg = aleat ? mensajes[Math.floor(Math.random()*mensajes.length)].texto : textoGlobal;
+    const msg = aleat ? mensajes[Math.floor(Math.random()*mensajes.length)].texto : mensajeGlobal;
 
     try{
       const r=await fetch('/enviar',{method:'POST',
@@ -125,4 +258,5 @@ document.getElementById('btnEnviar').onclick=async()=>{
   }
 };
 </script>
-</body></html>
+</body>
+</html>
