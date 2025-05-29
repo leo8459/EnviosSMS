@@ -1,78 +1,128 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Enviar SMS</title>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>SMS Gateway</title>
 <style>
- body{font-family:sans-serif;margin:40px;}
- table{border-collapse:collapse;width:100%;}
- th,td{border:1px solid #ccc;padding:6px;text-align:left;}
- th{background:#f0f0f0;}
- tr.ok   {background:#d4edda;}
- tr.fail {background:#f8d7da;}
- tr.wait {background:#fff4cc;}
- button{margin-top:15px;padding:8px 16px;}
-</style>
-</head>
-<body>
+body{font-family:sans-serif;margin:30px;}
+section{margin-bottom:35px;}
+table{border-collapse:collapse;width:100%;}
+th,td{border:1px solid #ccc;padding:6px;}
+th{background:#f0f0f0;}
+tr.ok{background:#d4edda;}tr.fail{background:#f8d7da;}tr.wait{background:#fff4cc;}tr.sel{background:#cce5ff;}
+button{padding:6px 14px;margin-top:10px;}
+#buscador{width:280px;padding:6px;}
+textarea{width:100%;height:60px;}
+</style></head><body>
 
-<h2>📦 Paquetes disponibles (elige a quién enviar SMS)</h2>
+<h1>📲 Envío de SMS</h1>
 
-<table id="tabla">
- <thead><tr><th>#</th><th>CODIGO</th><th>TELÉFONO</th><th>✔</th></tr></thead>
- <tbody></tbody>
-</table>
+<!-- 1. Buscador / selección -->
+<section>
+  <input id="buscador" placeholder="Escanea o escribe CODIGO y Enter">
+  <button id="btnEnviar">📤 Enviar SMS</button>
+  <label><input type="checkbox" id="chkAleatorio"> usar mensaje aleatorio</label>
+  <table id="tabla"><thead><tr>
+    <th>#</th><th>CODIGO</th><th>TELÉFONO</th>
+    <th><input id="checkAll" type="checkbox"></th>
+  </tr></thead><tbody></tbody></table>
+</section>
 
-<button id="btnEnviar">📤 Enviar SMS</button>
+<!-- 2. Gestor de mensajes -->
+<section>
+  <h2>💬 Mensajes guardados</h2>
+  <textarea id="nuevoTxt" placeholder="Escribe mensaje y pulsa Guardar…"></textarea><br>
+  <button id="btnGuardar">💾 Guardar mensaje</button>
+  <ul id="listaMsg"></ul>
+</section>
 
 <script>
-/* ── 1. cargar paquetes ───────────────────────── */
+/* ─ Variables globales ─ */
+let mensajes=[];
+
+/* ───── Paquetes ───── */
 async function cargarPaquetes(){
-  const r   = await fetch('/api/paquetes');
-  const arr = await r.json();
-  const tbody = document.querySelector('#tabla tbody');
-  tbody.innerHTML='';
+  const r=await fetch('/api/paquetes'); const arr=await r.json();
+  const tb=document.querySelector('#tabla tbody'); tb.innerHTML='';
   arr.forEach((p,i)=>{
-    if(!p.TELEFONO || p.TELEFONO==0) return;          // ignora vacíos
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${i+1}</td>
-      <td>${p.CODIGO}</td>
-      <td>${p.TELEFONO}</td>
-      <td><input type="checkbox" value="${p.TELEFONO}"></td>`;
-    tbody.appendChild(tr);
+    if(!p.TELEFONO||p.TELEFONO==0) return;
+    tb.insertAdjacentHTML('beforeend',`
+      <tr><td>${i+1}</td><td class="cod">${p.CODIGO}</td>
+      <td>${p.TELEFONO}</td><td><input class="chk" value="${p.TELEFONO}" type="checkbox"></td></tr>`);
   });
 }
 cargarPaquetes();
 
-/* ── 2. enviar seleccionados ──────────────────── */
-document.getElementById('btnEnviar').addEventListener('click',async()=>{
-  const sel=[...document.querySelectorAll('tbody input:checked')];
-  if(!sel.length) return alert('Selecciona al menos un teléfono');
-  const mensaje=prompt('Mensaje a enviar:');
-  if(!mensaje) return;
+/* ───── Mensajes ───── */
+async function cargarMensajes(){
+  mensajes = await (await fetch('/api/mensajes')).json();
+  const ul=document.getElementById('listaMsg'); ul.innerHTML='';
+  mensajes.forEach(m=>{
+    ul.insertAdjacentHTML('beforeend',`
+      <li>${m.texto}
+        <button data-id="${m.id}">🗑️</button>
+      </li>`);
+  });
+}
+cargarMensajes();
 
-  for(const chk of sel){
-    const tr=chk.closest('tr');
-    tr.className='wait';
-    const num=chk.value.startsWith('+')?chk.value:`+591${chk.value}`;
+/* guardar nuevo */
+document.getElementById('btnGuardar').onclick=async()=>{
+  const txt=document.getElementById('nuevoTxt').value.trim();
+  if(!txt) return;
+  await fetch('/api/mensajes',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({texto:txt})});
+  document.getElementById('nuevoTxt').value='';
+  cargarMensajes();
+};
+
+/* borrar */
+document.getElementById('listaMsg').onclick=async e=>{
+  if(e.target.tagName!=='BUTTON') return;
+  await fetch('/api/mensajes/'+e.target.dataset.id,{method:'DELETE'});
+  cargarMensajes();
+};
+
+/* ───── Seleccionar todo ───── */
+document.getElementById('checkAll').onchange=e=>{
+  document.querySelectorAll('.chk').forEach(c=>c.checked=e.target.checked);
+};
+
+/* ───── Buscador / lector ───── */
+document.getElementById('buscador').onkeypress=e=>{
+  if(e.key!=='Enter') return;
+  const val=e.target.value.trim().toUpperCase(); if(!val) return;
+  let ok=false;
+  document.querySelectorAll('#tabla tbody tr').forEach(tr=>{
+    tr.classList.remove('sel');
+    if(tr.querySelector('.cod').textContent.trim().toUpperCase()===val){
+      tr.classList.add('sel'); tr.querySelector('.chk').checked=true;
+      tr.scrollIntoView({behavior:'smooth',block:'center'}); ok=true;
+    }
+  });
+  if(!ok) alert('Código no encontrado'); e.target.value='';
+};
+
+/* ───── Enviar SMS ───── */
+document.getElementById('btnEnviar').onclick=async()=>{
+  const sel=[...document.querySelectorAll('.chk:checked')];
+  if(!sel.length) return alert('Marca teléfonos');
+  const aleat=document.getElementById('chkAleatorio').checked;
+  let textoGlobal=!aleat ? prompt('Mensaje a enviar:') : null;
+  if(!aleat && !textoGlobal) return;
+
+  if(aleat && mensajes.length===0){ return alert('No hay mensajes guardados'); }
+
+  for(const c of sel){
+    const tr=c.closest('tr'); tr.className='wait';
+    const num=c.value.startsWith('+')?c.value:`+591${c.value}`;
+    const msg = aleat ? mensajes[Math.floor(Math.random()*mensajes.length)].texto : textoGlobal;
 
     try{
-      const r=await fetch('/enviar',{
-        method:'POST',
+      const r=await fetch('/enviar',{method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:new URLSearchParams({ numero:num, mensaje })
-      });
+        body:new URLSearchParams({numero:num,mensaje:msg})});
       tr.className = r.ok ? 'ok':'fail';
-      if(!r.ok){
-        console.error('Error',r.status,num);
-      }
-    }catch(e){
-      tr.className='fail';
-      console.error('Fetch error',e);
-    }
+    }catch{ tr.className='fail'; }
   }
-});
+};
 </script>
-</body>
-</html>
+</body></html>
